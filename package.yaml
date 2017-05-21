@@ -9,9 +9,48 @@ default-extensions:
   - LambdaCase
   - OverloadedStrings
   - ViewPatterns
+  - BangPatterns
+  - DataKinds
+  - DeriveGeneric
+  - FlexibleContexts
+  - GADTs
+  - LambdaCase
+  - ScopedTypeVariables
+  - TypeApplications
+  - ViewPatterns
 
 dependencies:
   - base
+  - bytestring
+  - containers
+  - hmatrix
+  - microlens-platform
+  - monad-loops
+  - mtl
+  - mwc-random
+  - safe-exceptions
+  - statistics
+  - text
+  - unordered-containers
+  - vector
+  - criterion
+  - proto-lens
+  - random
+  - HUnit
+  - split
+  - zlib
+  - binary
+
+  - backprop
+
+  - grenade
+
+  - tensorflow-core-ops
+  - tensorflow-opgen
+  - tensorflow-ops
+  - tensorflow-proto
+  - tensorflow-test
+  - tensorflow
 
 library:
   source-dirs: src

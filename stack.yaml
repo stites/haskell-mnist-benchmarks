@@ -1,8 +1,13 @@
-resolver: nightly-2017-05-20
-resolver: lts-8.15
-
-packages:
-- '.'
-extra-deps: []
 flags: {}
 extra-package-dbs: []
+packages:
+- '.'
+- location:
+    git: git@github.com:HuwCampbell/grenade
+    commit: '9509719'
+  extra-dep: true
+extra-deps:
+- concurrent-output-1.7.9
+- hedgehog-0.1
+- wl-pprint-annotated-0.0.1.4
+resolver: nightly-2017-05-20
