@@ -1,0 +1,32 @@
+name: mnist-benchmarks
+version: 0.1.0.0
+
+ghc-options: -optl-fuse-ld=gold -Wall
+ld-options:  -fuse-ld=gold
+
+default-extensions:
+  - BangPatterns
+  - LambdaCase
+  - OverloadedStrings
+  - ViewPatterns
+
+dependencies:
+  - base
+
+library:
+  source-dirs: src
+
+tests:
+  doctest:
+    main: DocTest.hs
+    source-dirs: test
+    dependencies:
+      - mnist-benchmarks
+      - doctest
+
+  spec:
+    main: Spec.hs
+    source-dirs: test
+    dependencies:
+      - mnist-benchmarks
+      - hspec
