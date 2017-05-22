@@ -17,7 +17,7 @@ data-files:
 library
   hs-source-dirs:
       bench
-  default-extensions: BangPatterns LambdaCase OverloadedStrings ViewPatterns BangPatterns DataKinds DeriveGeneric FlexibleContexts GADTs LambdaCase ScopedTypeVariables TypeApplications ViewPatterns
+  default-extensions: BangPatterns LambdaCase OverloadedStrings ViewPatterns BangPatterns DataKinds DeriveGeneric FlexibleContexts GADTs LambdaCase ScopedTypeVariables TypeApplications ViewPatterns NoImplicitPrelude
   ghc-options: -optl-fuse-ld=gold -Wall
   ld-options: -fuse-ld=gold
   build-depends:
@@ -41,6 +41,8 @@ library
     , split
     , zlib
     , binary
+    , mnist-idx
+    , transformers
     , backprop
     , grenade
     , tensorflow-core-ops
@@ -50,5 +52,7 @@ library
     , tensorflow-test
     , tensorflow
   exposed-modules:
+      MNIST.DataSet
+      MNIST.Prelude
       MNIST.Tensorflow
   default-language: Haskell2010
