@@ -4,6 +4,8 @@ version: 0.1.0.0
 ghc-options: -optl-fuse-ld=gold -Wall
 ld-options:  -fuse-ld=gold
 
+data-files: data/*.gz
+
 default-extensions:
   - BangPatterns
   - LambdaCase
@@ -53,19 +55,19 @@ dependencies:
   - tensorflow
 
 library:
-  source-dirs: src
+  source-dirs: bench
 
-tests:
-  doctest:
-    main: DocTest.hs
-    source-dirs: test
-    dependencies:
-      - mnist-benchmarks
-      - doctest
-
-  spec:
-    main: Spec.hs
-    source-dirs: test
-    dependencies:
-      - mnist-benchmarks
-      - hspec
+  # tests:
+  #   doctest:
+  #     main: DocTest.hs
+  #     source-dirs: test
+  #     dependencies:
+  #       - mnist-benchmarks
+  #       - doctest
+  #
+  #   spec:
+  #     main: Spec.hs
+  #     source-dirs: test
+  #     dependencies:
+  #       - mnist-benchmarks
+  #       - hspec

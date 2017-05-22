@@ -8,9 +8,15 @@ license-file:   LICENSE
 build-type:     Simple
 cabal-version:  >= 1.10
 
+data-files:
+    data/t10k-images-idx3-ubyte.gz
+    data/t10k-labels-idx1-ubyte.gz
+    data/train-images-idx3-ubyte.gz
+    data/train-labels-idx1-ubyte.gz
+
 library
   hs-source-dirs:
-      src
+      bench
   default-extensions: BangPatterns LambdaCase OverloadedStrings ViewPatterns BangPatterns DataKinds DeriveGeneric FlexibleContexts GADTs LambdaCase ScopedTypeVariables TypeApplications ViewPatterns
   ghc-options: -optl-fuse-ld=gold -Wall
   ld-options: -fuse-ld=gold
@@ -43,90 +49,6 @@ library
     , tensorflow-proto
     , tensorflow-test
     , tensorflow
-  default-language: Haskell2010
-
-test-suite doctest
-  type: exitcode-stdio-1.0
-  main-is: DocTest.hs
-  hs-source-dirs:
-      test
-  default-extensions: BangPatterns LambdaCase OverloadedStrings ViewPatterns BangPatterns DataKinds DeriveGeneric FlexibleContexts GADTs LambdaCase ScopedTypeVariables TypeApplications ViewPatterns
-  ghc-options: -optl-fuse-ld=gold -Wall
-  ld-options: -fuse-ld=gold
-  build-depends:
-      base
-    , bytestring
-    , containers
-    , hmatrix
-    , microlens-platform
-    , monad-loops
-    , mtl
-    , mwc-random
-    , safe-exceptions
-    , statistics
-    , text
-    , unordered-containers
-    , vector
-    , criterion
-    , proto-lens
-    , random
-    , HUnit
-    , split
-    , zlib
-    , binary
-    , backprop
-    , grenade
-    , tensorflow-core-ops
-    , tensorflow-opgen
-    , tensorflow-ops
-    , tensorflow-proto
-    , tensorflow-test
-    , tensorflow
-    , mnist-benchmarks
-    , doctest
-  other-modules:
-      Spec
-  default-language: Haskell2010
-
-test-suite spec
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  hs-source-dirs:
-      test
-  default-extensions: BangPatterns LambdaCase OverloadedStrings ViewPatterns BangPatterns DataKinds DeriveGeneric FlexibleContexts GADTs LambdaCase ScopedTypeVariables TypeApplications ViewPatterns
-  ghc-options: -optl-fuse-ld=gold -Wall
-  ld-options: -fuse-ld=gold
-  build-depends:
-      base
-    , bytestring
-    , containers
-    , hmatrix
-    , microlens-platform
-    , monad-loops
-    , mtl
-    , mwc-random
-    , safe-exceptions
-    , statistics
-    , text
-    , unordered-containers
-    , vector
-    , criterion
-    , proto-lens
-    , random
-    , HUnit
-    , split
-    , zlib
-    , binary
-    , backprop
-    , grenade
-    , tensorflow-core-ops
-    , tensorflow-opgen
-    , tensorflow-ops
-    , tensorflow-proto
-    , tensorflow-test
-    , tensorflow
-    , mnist-benchmarks
-    , hspec
-  other-modules:
-      DocTest
+  exposed-modules:
+      MNIST.Tensorflow
   default-language: Haskell2010
