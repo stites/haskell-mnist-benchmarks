@@ -4,15 +4,16 @@ module MNIST.Tensorflow where
 import MNIST.Prelude
 import MNIST.DataSet
 
-import qualified Data.Text.IO as T
 import qualified Data.Vector  as V
-import qualified TensorFlow.Gradient as TF
-import qualified TensorFlow.Core     as TF
-import qualified TensorFlow.Ops      as TF hiding (initializedVariable, zeroInitializedVariable)
-import qualified TensorFlow.Variable as TF
+import qualified TensorFlow.Gradient  as TF
+import qualified TensorFlow.Core      as TF
+import qualified TensorFlow.Ops       as TF
 
-numPixels = fromIntegral nPixels :: Int64
-numLabels = fromIntegral nLabels :: Int64
+
+numPixels :: Int64
+numPixels = fromIntegral nPixels
+numLabels :: Int64
+numLabels = fromIntegral nLabels
 
 -- | Create tensor with random values where the stddev depends on the width.
 randomParam :: Int64 -> Shape -> Build (Tensor Build Float)
@@ -44,98 +45,37 @@ data BatchSize = BatchSize Int64 | Variable
 
 getBatchSize :: BatchSize -> Int64
 getBatchSize (BatchSize i) =  i
-getBatchSize Variable      = -1
+getBatchSize Variable      = -1   -- ^ Use -1 batch size to support variable sized batches.
 
--- createModel :: BatchSize -> Int64 -> TF.Build Model
--- createModel (getBatchSize -> batchSize) hiddenSize = do
---   images            <- TF.placeholder [batchSize, numPixels]
---   (hWeights, hBias) <- initWeightsAndBias numPixels hiddenSize
---   let hidden = TF.relu $ (images <* hWeights) <+ hBias
---
---   -- Logits
---   (logitWeights, logitBias) <- initWeightsAndBias hiddenSize numLabels
---   let logits = (hidden <* logitWeights) <+ logitBias
---
---   predict <- TF.render . TF.cast $
---                 TF.argMax (TF.softmax logits) (TF.scalar (1 :: LabelType))
---
---   -- Create training action.
---   labels <- TF.placeholder [batchSize]
---
---   let labelVecs = TF.oneHot labels (fromIntegral numLabels) 1 0
---       -- loss :: Tensor Build Float
---       loss = reduceMean $ fst $ TF.softmaxCrossEntropyWithLogits logits labelVecs
---       -- params :: [TF.Variable Float]
---       params = [hWeights, hBias, logitWeights, logitBias]
---
---   grads <- TF.gradients loss params
---
---   let lr = TF.scalar 0.00001
---       applyGrad param grad = TF.assignAdd param (negate $ lr `TF.mul` grad)
---
---   trainStep <- TF.group =<< zipWithM applyGrad params grads
---
---   let correctPredictions = TF.equal predict labels
---   errorRateTensor <- TF.render $ 1 - reduceMean (TF.cast correctPredictions)
---
---   return Model {
---         train = \imFeed lFeed -> TF.runWithFeeds_ [
---               TF.feed images imFeed
---             , TF.feed labels lFeed
---             ] trainStep
---       , infer = \imFeed -> TF.runWithFeeds [TF.feed images imFeed] predict
---       , errorRate = \imFeed lFeed -> TF.unScalar <$> TF.runWithFeeds [
---               TF.feed images imFeed
---             , TF.feed labels lFeed
---             ] errorRateTensor
---       }
---   where
---     -- initWeightsAndBias :: Int64 -> Int64 -> TF.Build (Tensor z Float, Tensor z Float)
---     initWeightsAndBias x y = do
---       vec  <- TF.initializedVariable =<< randomParam x [x, y]
---       bias <- TF.zeroInitializedVariable [y]
---       return (vec, bias)
---
---     -- (<*) :: Tensor v Float -> TF.Variable Float -> Tensor Build Float
---     (<*) a b = a `TF.matMul` TF.readValue b
---
---     -- (<+) :: Tensor Build Float -> TF.Variable Float -> Tensor Build Float
---     (<+) a b = a `TF.add` TF.readValue b
---
-createModel :: TF.Build Model
-createModel = do
-    -- Use -1 batch size to support variable sized batches.
-    let batchSize = -1
+createModel :: BatchSize -> TF.Build Model
+createModel (getBatchSize->batchSize) = do
     -- Inputs.
     images <- TF.placeholder [batchSize, numPixels]
     -- Hidden layer.
     let numUnits = 500
-    (hiddenWeights :: TF.Variable Float) <-
+    hiddenWeights <-
         TF.initializedVariable =<< randomParam numPixels [numPixels, numUnits]
-    (hiddenBiases :: TF.Variable Float) <- TF.zeroInitializedVariable [numUnits]
-    let hiddenZ = (images `TF.matMul` TF.readValue hiddenWeights)
-                  `TF.add` TF.readValue hiddenBiases
+    hiddenBiases <- TF.zeroInitializedVariable [numUnits]
+    let hiddenZ = (images `TF.matMul` hiddenWeights) `TF.add` hiddenBiases
     let hidden = TF.relu hiddenZ
     -- Logits.
-    (logitWeights :: TF.Variable Float) <-
+    logitWeights <-
         TF.initializedVariable =<< randomParam numUnits [numUnits, numLabels]
-    (logitBiases :: TF.Variable Float) <- TF.zeroInitializedVariable [numLabels]
-    let logits = (hidden `TF.matMul` TF.readValue logitWeights)
-                 `TF.add` TF.readValue logitBiases
+    logitBiases <- TF.zeroInitializedVariable [numLabels]
+    let logits = (hidden `TF.matMul` logitWeights) `TF.add` logitBiases
     predict <- TF.render $ TF.cast $
                TF.argMax (TF.softmax logits) (TF.scalar (1 :: LabelType))
 
     -- Create training action.
     labels <- TF.placeholder [batchSize]
     let labelVecs = TF.oneHot labels (fromIntegral numLabels) 1 0
-        loss   = reduceMean . fst $ TF.softmaxCrossEntropyWithLogits logits labelVecs
-        params :: [TF.Variable Float]
+        loss =
+            reduceMean $ fst $ TF.softmaxCrossEntropyWithLogits logits labelVecs
         params = [hiddenWeights, hiddenBiases, logitWeights, logitBiases]
-
-    grads <- undefined -- TF.gradients loss params
+    grads <- TF.gradients loss params
 
     let lr = TF.scalar 0.00001
-        applyGrad param grad = TF.assignAdd param (negate $ lr `TF.mul` grad)
+        applyGrad param grad = TF.assign param $ param `TF.sub` (lr `TF.mul` grad)
     trainStep <- TF.group =<< zipWithM applyGrad params grads
 
     let correctPredictions = TF.equal predict labels
@@ -151,7 +91,8 @@ createModel = do
                 TF.feed images imFeed
               , TF.feed labels lFeed
               ] errorRateTensor
-        }
+    }
+
 
 main :: IO ()
 main = TF.runSession $ do
@@ -166,7 +107,7 @@ main = TF.runSession $ do
 
 
     -- Create the model.
-    model <- TF.build createModel
+    model <- TF.build $ createModel Variable
 
     -- Functions for generating batches.
     let
