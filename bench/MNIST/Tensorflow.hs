@@ -43,55 +43,96 @@ data Model = Model
 
 data BatchSize = BatchSize Int64 | Variable
 
+
 getBatchSize :: BatchSize -> Int64
 getBatchSize (BatchSize i) =  i
 getBatchSize Variable      = -1   -- ^ Use -1 batch size to support variable sized batches.
 
-createModel :: BatchSize -> TF.Build Model
-createModel (getBatchSize->batchSize) = do
+
+createModel :: BatchSize -> Int64 -> TF.Build Model
+createModel (getBatchSize->batchSize) numHidden = do
     -- Inputs.
-    images <- TF.placeholder [batchSize, numPixels]
+    images :: Tensor TF.Value Float <- TF.placeholder [batchSize, numPixels]
+
     -- Hidden layer.
-    let numUnits = 500
-    hiddenWeights <-
-        TF.initializedVariable =<< randomParam numPixels [numPixels, numUnits]
-    hiddenBiases <- TF.zeroInitializedVariable [numUnits]
-    let hiddenZ = (images `TF.matMul` hiddenWeights) `TF.add` hiddenBiases
-    let hidden = TF.relu hiddenZ
+    (hWeights, hBiases) <- initialize numPixels numHidden
+    let hidden :: Tensor Build Float
+        hidden = TF.relu $ (images `TF.matMul` hWeights) `TF.add` hBiases
+
     -- Logits.
-    logitWeights <-
-        TF.initializedVariable =<< randomParam numUnits [numUnits, numLabels]
-    logitBiases <- TF.zeroInitializedVariable [numLabels]
-    let logits = (hidden `TF.matMul` logitWeights) `TF.add` logitBiases
-    predict <- TF.render $ TF.cast $
-               TF.argMax (TF.softmax logits) (TF.scalar (1 :: LabelType))
+    (logitWeights, logitBiases) <- initialize numHidden numLabels
+    let logits :: Tensor Build Float
+        logits = (hidden `TF.matMul` logitWeights) `TF.add` logitBiases
+
+    predict <- calculatePrediction logits
+
+    let
+      inferAction :: TensorData Float -> Session (Vector LabelType)
+      inferAction imFeed = TF.runWithFeeds [TF.feed images imFeed] predict
+
+    -- ========================================================================= --
 
     -- Create training action.
     labels <- TF.placeholder [batchSize]
-    let labelVecs = TF.oneHot labels (fromIntegral numLabels) 1 0
-        loss =
-            reduceMean $ fst $ TF.softmaxCrossEntropyWithLogits logits labelVecs
-        params = [hiddenWeights, hiddenBiases, logitWeights, logitBiases]
-    grads <- TF.gradients loss params
 
-    let lr = TF.scalar 0.00001
-        applyGrad param grad = TF.assign param $ param `TF.sub` (lr `TF.mul` grad)
-    trainStep <- TF.group =<< zipWithM applyGrad params grads
+    let
+      labelVecs :: Tensor Build Float
+      labelVecs = TF.oneHot labels (fromIntegral numLabels) 1 0
+
+      loss :: Tensor Build Float
+      loss = reduceMean $ fst $ TF.softmaxCrossEntropyWithLogits logits labelVecs
+
+      params :: [Tensor TF.Ref Float]
+      params = [hWeights, hBiases, logitWeights, logitBiases]
+
+    grads     <- TF.gradients loss params
+    trainStep <- applyGradients params grads
+
+    let
+      trainingAction :: TensorData Float -> TensorData LabelType -> Session ()
+      trainingAction imFeed lFeed = TF.runWithFeeds_
+        [ TF.feed images imFeed
+        , TF.feed labels lFeed
+        ] trainStep
+
+    -- ========================================================================= --
 
     let correctPredictions = TF.equal predict labels
+
     errorRateTensor <- TF.render $ 1 - reduceMean (TF.cast correctPredictions)
 
-    return Model {
-          train = \imFeed lFeed -> TF.runWithFeeds_ [
-                TF.feed images imFeed
-              , TF.feed labels lFeed
-              ] trainStep
-        , infer = \imFeed -> TF.runWithFeeds [TF.feed images imFeed] predict
-        , errorRate = \imFeed lFeed -> TF.unScalar <$> TF.runWithFeeds [
-                TF.feed images imFeed
-              , TF.feed labels lFeed
-              ] errorRateTensor
-    }
+    let
+      errorRateAction :: TensorData Float -> TensorData LabelType -> Session Float
+      errorRateAction imFeed lFeed = TF.unScalar <$> TF.runWithFeeds
+        [ TF.feed images imFeed
+        , TF.feed labels lFeed
+        ] errorRateTensor
+
+    return Model
+      { train = trainingAction
+      , infer = inferAction
+      , errorRate = errorRateAction
+      }
+
+    where
+      initialize :: Int64 -> Int64 -> Build (Tensor TF.Ref Float, Tensor TF.Ref Float)
+      initialize x y = do
+        weights <- TF.initializedVariable =<< randomParam x [x, y]
+        bias <- TF.zeroInitializedVariable [y]
+        return (weights, bias)
+
+      calculatePrediction :: Tensor Build Float -> Build (Tensor TF.Value LabelType)
+      calculatePrediction logits = TF.render . TF.cast $
+        TF.argMax (TF.softmax logits) (TF.scalar (1 :: LabelType))
+
+      applyGradients :: [Tensor TF.Ref Float] -> [Tensor TF.Value Float] -> Build TF.ControlNode
+      applyGradients params grads = zipWithM applyGrad params grads >>= TF.group
+        where
+          applyGrad :: Tensor TF.Ref Float -> Tensor TF.Value Float -> Build (Tensor TF.Ref Float)
+          applyGrad param grad = TF.assign param $ param `TF.sub` (lr `TF.mul` grad)
+
+          lr :: Tensor Build Float
+          lr = TF.scalar 0.00001
 
 
 main :: IO ()
@@ -107,7 +148,7 @@ main = TF.runSession $ do
 
 
     -- Create the model.
-    model <- TF.build $ createModel Variable
+    model <- TF.build $ createModel Variable 500
 
     -- Functions for generating batches.
     let
