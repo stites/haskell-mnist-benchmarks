@@ -16,13 +16,17 @@ import Data.Monoid             as X
 import Data.Vector             as X (Vector)
 import Data.List.Split            as X
 import Control.Arrow as X
-import Control.Monad.Trans.Maybe  as X
+import Control.Monad.Trans   as X (lift)
+import Control.Monad.Trans.Maybe   as X (MaybeT(..))
+import Control.Monad.Trans.Reader  as X (ReaderT(..), Reader, ask)
 
 import qualified Prelude as P
 
 import Data.Vector.Unboxed     as UV (Vector)
 
 type UVector = UV.Vector
+
+identity :: a -> a
 identity = P.id
 
 
