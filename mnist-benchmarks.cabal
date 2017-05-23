@@ -43,8 +43,14 @@ library
     , binary
     , mnist-idx
     , transformers
-    , backprop
     , grenade
+    , backprop
+    , deepseq
+    , bifunctors
+    , time
+    , type-combinators
+    , directory
+    , generics-sop
     , tensorflow-core-ops
     , tensorflow-opgen
     , tensorflow-ops
@@ -52,6 +58,7 @@ library
     , tensorflow-test
     , tensorflow
   exposed-modules:
+      MNIST.Backprop
       MNIST.DataSet
       MNIST.Prelude
       MNIST.Tensorflow

@@ -46,9 +46,15 @@ dependencies:
   - mnist-idx
   - transformers
 
-  - backprop
-
   - grenade
+
+  - backprop
+  - deepseq
+  - bifunctors
+  - time
+  - type-combinators
+  - directory
+  - generics-sop
 
   - tensorflow-core-ops
   - tensorflow-opgen
