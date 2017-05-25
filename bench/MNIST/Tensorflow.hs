@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module MNIST.Tensorflow where
+module Main where
 
 import MNIST.Prelude
 import MNIST.DataSet
@@ -168,8 +168,8 @@ createModel batchSize numHidden = do
 main :: IO ()
 main = TF.runSession $ do
     -- Read training and test data.
-    trainingSet <- liftIO trainingData
-    testSet     <- liftIO testData
+    !trainingSet <- liftIO trainingDataTf
+    !testSet     <- liftIO testDataTf
 
     let
       trainingImages = fmap snd trainingSet
@@ -219,4 +219,3 @@ main = TF.runSession $ do
 
     selectBatch :: Int -> [a] -> [a]
     selectBatch i xs = take batchSize $ drop (i * batchSize) (cycle xs)
-

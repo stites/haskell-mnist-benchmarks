@@ -1,8 +1,7 @@
 name: mnist-benchmarks
 version: 0.1.0.0
 
-ghc-options: -optl-fuse-ld=gold -Wall
-ld-options:  -fuse-ld=gold
+ghc-options: -Wall -O2
 
 data-files: data/*.gz
 
@@ -21,6 +20,8 @@ default-extensions:
   - TypeApplications
   - ViewPatterns
   - NoImplicitPrelude
+  - ConstraintKinds
+  - KindSignatures
 
 dependencies:
   - base
@@ -64,7 +65,19 @@ dependencies:
   - tensorflow
 
 library:
-  source-dirs: bench
+  source-dirs: src
+
+executables:
+  tf_mnist:
+    main: bench/MNIST/Tensorflow.hs
+    dependencies:
+    - mnist-benchmarks
+
+  bp_mnist:
+    main: bench/MNIST/Backprop.hs
+    dependencies:
+    - mnist-benchmarks
+
 
   # tests:
   #   doctest:

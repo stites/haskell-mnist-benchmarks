@@ -1,16 +1,17 @@
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE ConstraintKinds #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module MNIST.Backprop where
+module Main where
 
 import MNIST.Prelude
-import qualified Data.Vector.Generic    as VG
-import qualified Data.Vector.Unboxed    as VU
-import qualified Generics.SOP           as SOP
-import qualified Numeric.LinearAlgebra  as HM
-import qualified System.Random.MWC      as MWC
+import MNIST.DataSet
 import Numeric.LinearAlgebra.Static hiding (dot)
 import Numeric.Backprop
+
+import qualified Data.Vector.Generic             as VG
+import qualified Data.Vector                     as V
+import qualified Generics.SOP                    as SOP
+import qualified Numeric.LinearAlgebra           as HM
+import qualified System.Random.MWC               as MWC
+import qualified System.Random.MWC.Distributions as MWC
 
 -- | type-combinators alias for the terminal constructor
 nil :: Prod f '[]
@@ -167,25 +168,54 @@ runNetwork = withInps $ \(x :< n :< _) -> do
   r <- (bpOp runLayer) ~$ (logistic z :< l3 :< nil)
 
   bpOp softmax ~$ only r
+  where
+    softmax :: KnownNat n => BPOp s '[ R n ] (R n)
+    softmax = withInps $ \(x :< _) -> do
+      expX <- bindVar (exp x)
+      totX <- vsum ~$ (expX :< nil)
+      scale        ~$ (1 / totX :< expX :< nil)
 
 
-softmax :: KnownNat n => BPOp s '[ R n ] (R n)
-softmax = withInps $ \(x :< _) -> do
-  expX <- bindVar (exp x)
-  totX <- vsum ~$ (expX :< nil)
-  scale        ~$ (1 / totX :< expX :< nil)
+runNetOnInp :: KnownNat4 i h1 h2 o => Network i h1 h2 o -> R i -> R o
+runNetOnInp n x = evalBPOp runNetwork (x ::< n ::< nil)
 
 
-crossEntropy :: forall s n . KnownNat n => R n -> BPOpI s '[ R n ] Double
-crossEntropy targ (r :< _) = negate (dot .$ (log r :< only t))
+gradNet :: KnownNat4 i h1 h2 o => Network i h1 h2 o -> R i -> Network i h1 h2 o
+gradNet n x = case gradBPOp runNetwork (x ::< n ::< nil) of
+    _gradX ::< gradN ::< nil -> gradN
+
+
+-- ========================================================================= --
+
+-- crossEntropy :: forall s n . KnownNat n => R n -> BPOp s '[ R n ] Double
+-- crossEntropy targ = withInps $ \(r :< _) ->
+--   negate (dot ~$ (log r :< only t))
+--   where
+--     t :: BVar s '[R n] (R n)
+--     t = constVar targ
+
+
+crossEntropyI :: forall s n . KnownNat n => R n -> BPOpI s '[ R n ] Double
+crossEntropyI targ (r :< _) = negate (dot .$ (log r :< only t))
   where
     t :: BVar s '[R n] (R n)
     t = constVar targ
 
 
-softMaxCrossEntropy :: forall s n . KnownNat n => R n -> BPOpI s '[ R n ] Double
-softMaxCrossEntropy targ (r :< Ø) =
-  realToFrac tsum * log (vsum .$ (r :< Ø)) - (dot .$ (r :< t :< Ø))
+softMaxCrossEntropy :: forall s n . KnownNat n => R n -> BPOp s '[ R n ] Double
+softMaxCrossEntropy targ = withInps $ \(r :< Ø) -> do
+  bindVar $ realToFrac tsum * log (vsum .$ (only r)) - (dot .$ (r :< t :< nil))
+  where
+    tsum :: Double
+    tsum = HM.sumElements . extract $ targ
+
+    t :: BVar s '[R n] (R n)
+    t = constVar targ
+
+
+softMaxCrossEntropyI :: forall s n . KnownNat n => R n -> BPOpI s '[ R n ] Double
+softMaxCrossEntropyI targ (r :< Ø) =
+  realToFrac tsum * log (vsum .$ (only r)) - (dot .$ (r :< t :< nil))
   where
     tsum :: Double
     tsum = HM.sumElements . extract $ targ
@@ -195,72 +225,84 @@ softMaxCrossEntropy targ (r :< Ø) =
 
 
 trainStep
-    :: forall i h1 h2 o. KnownNat4 i h1 h2 o
-    => Double
-    -> R i
-    -> R o
-    -> Network i h1 h2 o
-    -> Network i h1 h2 o
+  :: forall i h1 h2 o. KnownNat4 i h1 h2 o
+  => Double
+  -> R i
+  -> R o
+  -> Network i h1 h2 o
+  -> Network i h1 h2 o
 trainStep r !x !t !n =
-  case grad of
+  case gradBPOp o (x ::< n ::< nil) of
     (_ :< I gN :< _) -> n - (realToFrac r * gN)
-    otherwise        -> error "impossible"
-
   where
-    grad :: Tuple '[R i, Network i h1 h2 o]
-    grad = gradBPOp (netErr t) (x ::< n ::< Ø)
+    o :: BPOp s '[ R i, Network i h1 h2 o ] Double
+    o = do
+      y <- runNetwork
+      implicitly (crossEntropyI t) -$ (y :< nil)
 
+trainList
+  :: KnownNat4 i h1 h2 o
+  => Double
+  -> [(R i, R o)]
+  -> Network i h1 h2 o
+  -> Network i h1 h2 o
+trainList r = flip $ foldl' (\n (x,y) -> trainStep r x y n)
 
-netErr
-    :: (KnownNat i, KnownNat h1, KnownNat h2, KnownNat o)
-    => R o
-    -> BPOp s '[ R i, Network i h1 h2 o ] Double
-netErr t = do
-    y <- runNetwork
-    implicitly (crossEntropy t) -$ (y :< Ø)
+testNet
+  :: forall i h1 h2 o. KnownNat4 i h1 h2 o
+  => [(R i, R o)]
+  -> Network i h1 h2 o
+  -> Double
+testNet xs n = sum (map (\(i,o) -> test i o) xs) / fromIntegral (length xs)
+  where
+    test :: R i -> R o -> Double
+    test x (extract->t) = fromIntegral . fromEnum $
+      HM.maxIndex t == HM.maxIndex (extract r)
+      where
+        r :: R o
+        r = evalBPOp runNetwork (x ::< n ::< nil)
 
 
 main :: IO ()
 main = MWC.withSystemRandom $ \g -> do
-    Just test  <- loadMNIST "data/t10k-images-idx3-ubyte"  "data/t10k-labels-idx1-ubyte"
-    putStrLn "Loaded data."
-    net0 <- MWC.uniformR @(Network 784 300 100 9) (-0.5, 0.5) g
-    createDirectoryIfMissing True "bench-results"
-    t <- getZonedTime
-    let test0   = head test
-        tstr    = formatTime defaultTimeLocale "%Y%m%d-%H%M%S" t
-    defaultMainWith defaultConfig
-          { reportFile = Just $ "bench-results/mnist-bench_" ++ tstr ++ ".html"
-          , timeLimit  = 10
-          } [
-        bgroup "gradient" [
-          let testBP     x y = getI . index (IS IZ) $
-                  gradBPOp (netErr y) (x ::< net0 ::< Ø)
-            in  bench "bp"     $ nf (uncurry testBP) test0
-          ]
-      , bgroup "descent" [
-          let testBP     x y = trainStep 0.02 x y net0
-            in  bench "bp"     $ nf (uncurry testBP) test0
-          ]
-      , bgroup "run" [
-          let testBP     x   = evalBPOp runNetwork (x ::< net0 ::< Ø)
-          in  bench "bp"     $ nf testBP (fst test0)
-          ]
-      ]
+  -- initialize data and network
+  !trainingSet <- trainingDataBp
+  !testSet     <- testDataBp
+  !net0        <- MWC.uniformR @(Network 784 300 100 9) (-0.5, 0.5) g
 
-loadMNIST
-    :: FilePath
-    -> FilePath
-    -> IO (Maybe [(R 784, R 9)])
-loadMNIST fpI fpL = runMaybeT $ do
-    i <- MaybeT          $ decodeIDXFile       fpI
-    l <- MaybeT          $ decodeIDXLabelsFile fpL
-    d <- MaybeT . return $ labeledIntData l i
-    r <- MaybeT . return $ for d (bitraverse mkImage mkLabel . swap)
-    -- liftIO . evaluate $ force r
-    liftIO . undefined $ force r
+  flip evalStateT net0 . forM_ [1..100] $ \e -> do
+    trainingSet' <- liftIO . fmap V.toList $ MWC.uniformShuffle (V.fromList trainingSet) g
+    liftIO $ printf "[Epoch %d]\n" (e :: Int)
+
+    forM_ ([1..] `zip` chunksOf batch trainingSet') $ \(b, chnk) -> StateT $ \n0 -> do
+      printf "(Batch %d)\n" (b :: Int)
+
+      -- t0 <- getCurrentTime
+      n' <- evaluate . force $ trainList rate chnk n0
+      -- t1 <- getCurrentTime
+      -- printf "Trained on %d points in %s.\n" batch (show (t1 `diffUTCTime` t0))
+
+      let trainScore = testNet chnk    n'
+          testScore  = testNet testSet n'
+      printf "Training error:   %.2f%%\n" ((1 - trainScore) * 100)
+      -- printf "Validation error: %.2f%%\n" ((1 - testScore ) * 100)
+
+      return ((), n')
   where
-    mkImage :: VU.Vector Int -> Maybe (R 784)
-    mkImage = create . VG.convert . VG.map (\i -> fromIntegral i / 255)
-    mkLabel :: Int -> Maybe (R 9)
-    mkLabel n = create $ HM.build 9 (\i -> if round i == n then 1 else 0)
+    rate = 0.0001
+    batch = 100
+
+  --  go :: StateT (Network 784 300 100 9) IO ()
+  --  go = do
+  --    e <- get
+
+--
+--   -- Test
+--   let testPreds = map (take 3 testSet) $ \(x, _) -> evalBPOp runNetwork (x ::< net0 ::< nil)
+--
+--   liftIO $ forM_ ([0..3] :: [Int]) $ \i -> do
+--       -- T.putStrLn $ drawMNIST $ testImages !! i
+--       putStrLn $ "\n" ++ "expected " ++ show (testLabels !! i)
+--       putStrLn $         "     got " ++ show (testPreds !! i)
+--
+--
