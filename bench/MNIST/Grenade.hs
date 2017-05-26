@@ -1,19 +1,10 @@
 module Main where
 
--- import qualified Data.Attoparsec.Text as A
 import MNIST.Prelude
-import Data.List ( foldl' )
-import Data.Semigroup ( (<>) )
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import qualified Data.Vector.Storable as V
 import Control.Monad.Random
-
-import Numeric.LinearAlgebra ( maxIndex )
 import qualified Numeric.LinearAlgebra.Static as SA
 
 import Grenade
-import Grenade.Utils.OneHot
 
 
 type MNIST
@@ -29,8 +20,8 @@ type MNIST
      ]
 
 
-randomMnist :: MonadRandom m => m MNIST
-randomMnist = randomNetwork
+randomNet :: MonadRandom m => m MNIST
+randomNet = randomNetwork
 
 
 type Input  = S ('D1 784)
@@ -66,5 +57,42 @@ netTrain net0 rate n = do
     inCircle :: KnownNat n => R n -> (R n, Double) -> Bool
     inCircle v (o, r) = SA.norm_2 (v - o) <= r
 
-main = undefined
+
+netScore :: MNIST -> IO ()
+netScore network = putStrLn . unlines $
+  (fmap.fmap) (showNorm . go) testIns
+
+  where
+    testIns :: [[(Double, Double)]]
+    testIns = [ [ (x,y)  | x <- [0..50] ] | y <- [0..20] ]
+
+    go :: (Double, Double) -> Output
+    go (x,y) = runNet network (S1D $ SA.vector [x / 25 - 1, y / 10 - 1])
+
+    showNorm :: Output -> Char
+    showNorm (S1D r) = render $ SA.mean r
+
+    render :: Double -> Char
+    render n | n <= 0.2  = ' '
+             | n <= 0.4  = '.'
+             | n <= 0.6  = '-'
+             | n <= 0.8  = '='
+             | otherwise = '#'
+
+
+main :: IO ()
+main = do
+  net0 <- randomNet
+  net  <- netTrain net0 params examples
+  netScore net
+  where
+    examples :: Int
+    examples = 10000
+
+    params :: LearningParameters
+    params = LearningParameters
+      { learningRate = 0.01
+      , learningMomentum = 0.9
+      , learningRegulariser = 0.0005
+      }
 
