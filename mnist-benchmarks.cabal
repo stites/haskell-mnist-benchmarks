@@ -17,7 +17,7 @@ data-files:
 library
   hs-source-dirs:
       src
-  default-extensions: BangPatterns LambdaCase OverloadedStrings ViewPatterns BangPatterns DataKinds DeriveGeneric FlexibleContexts GADTs LambdaCase ScopedTypeVariables TypeApplications ViewPatterns NoImplicitPrelude ConstraintKinds KindSignatures
+  default-extensions: BangPatterns ConstraintKinds DataKinds DeriveGeneric FlexibleContexts GADTs KindSignatures LambdaCase NoImplicitPrelude OverloadedStrings ScopedTypeVariables TupleSections TypeApplications ViewPatterns
   ghc-options: -Wall -O2
   build-depends:
       base
@@ -43,6 +43,7 @@ library
     , mnist-idx
     , transformers
     , grenade
+    , MonadRandom
     , backprop
     , deepseq
     , bifunctors
@@ -63,7 +64,7 @@ library
 
 executable bp_mnist
   main-is: bench/MNIST/Backprop.hs
-  default-extensions: BangPatterns LambdaCase OverloadedStrings ViewPatterns BangPatterns DataKinds DeriveGeneric FlexibleContexts GADTs LambdaCase ScopedTypeVariables TypeApplications ViewPatterns NoImplicitPrelude ConstraintKinds KindSignatures
+  default-extensions: BangPatterns ConstraintKinds DataKinds DeriveGeneric FlexibleContexts GADTs KindSignatures LambdaCase NoImplicitPrelude OverloadedStrings ScopedTypeVariables TupleSections TypeApplications ViewPatterns
   ghc-options: -Wall -O2
   build-depends:
       base
@@ -89,6 +90,52 @@ executable bp_mnist
     , mnist-idx
     , transformers
     , grenade
+    , MonadRandom
+    , backprop
+    , deepseq
+    , bifunctors
+    , time
+    , type-combinators
+    , directory
+    , generics-sop
+    , tensorflow-core-ops
+    , tensorflow-opgen
+    , tensorflow-ops
+    , tensorflow-proto
+    , tensorflow-test
+    , tensorflow
+    , mnist-benchmarks
+  default-language: Haskell2010
+
+executable grenade_mnist
+  main-is: bench/MNIST/Grenade.hs
+  default-extensions: BangPatterns ConstraintKinds DataKinds DeriveGeneric FlexibleContexts GADTs KindSignatures LambdaCase NoImplicitPrelude OverloadedStrings ScopedTypeVariables TupleSections TypeApplications ViewPatterns
+  ghc-options: -Wall -O2
+  build-depends:
+      base
+    , bytestring
+    , containers
+    , hmatrix
+    , microlens-platform
+    , monad-loops
+    , mtl
+    , mwc-random
+    , safe-exceptions
+    , statistics
+    , text
+    , unordered-containers
+    , vector
+    , criterion
+    , proto-lens
+    , random
+    , HUnit
+    , split
+    , zlib
+    , binary
+    , mnist-idx
+    , transformers
+    , grenade
+    , MonadRandom
     , backprop
     , deepseq
     , bifunctors
@@ -107,7 +154,7 @@ executable bp_mnist
 
 executable tf_mnist
   main-is: bench/MNIST/Tensorflow.hs
-  default-extensions: BangPatterns LambdaCase OverloadedStrings ViewPatterns BangPatterns DataKinds DeriveGeneric FlexibleContexts GADTs LambdaCase ScopedTypeVariables TypeApplications ViewPatterns NoImplicitPrelude ConstraintKinds KindSignatures
+  default-extensions: BangPatterns ConstraintKinds DataKinds DeriveGeneric FlexibleContexts GADTs KindSignatures LambdaCase NoImplicitPrelude OverloadedStrings ScopedTypeVariables TupleSections TypeApplications ViewPatterns
   ghc-options: -Wall -O2
   build-depends:
       base
@@ -133,6 +180,7 @@ executable tf_mnist
     , mnist-idx
     , transformers
     , grenade
+    , MonadRandom
     , backprop
     , deepseq
     , bifunctors

@@ -7,21 +7,20 @@ data-files: data/*.gz
 
 default-extensions:
   - BangPatterns
-  - LambdaCase
-  - OverloadedStrings
-  - ViewPatterns
-  - BangPatterns
+  - ConstraintKinds
   - DataKinds
   - DeriveGeneric
   - FlexibleContexts
   - GADTs
+  - KindSignatures
   - LambdaCase
+  - NoImplicitPrelude
+  - OverloadedStrings
   - ScopedTypeVariables
+  - TupleSections
   - TypeApplications
   - ViewPatterns
-  - NoImplicitPrelude
-  - ConstraintKinds
-  - KindSignatures
+
 
 dependencies:
   - base
@@ -48,6 +47,7 @@ dependencies:
   - transformers
 
   - grenade
+  - MonadRandom
 
   - backprop
   - deepseq
@@ -77,6 +77,12 @@ executables:
     main: bench/MNIST/Backprop.hs
     dependencies:
     - mnist-benchmarks
+
+  grenade_mnist:
+    main: bench/MNIST/Grenade.hs
+    dependencies:
+    - mnist-benchmarks
+
 
 
   # tests:
