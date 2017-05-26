@@ -1,6 +1,7 @@
 module MNIST.Prelude
   ( module X
   , UVector
+  , GVector
   , identity
   ) where
 
@@ -40,7 +41,7 @@ import GHC.IO                        as X (evaluate)
 import Numeric.Backprop              as X (Op, op2')
 import System.Directory              as X
 import TensorFlow.Core               as X (Tensor, Shape, Build, TensorData, Session)
-import Numeric.LinearAlgebra.Static  as X (R(..), L(..))
+import Numeric.LinearAlgebra.Static  as X (R, L)
 
 import Data.Vector.Unboxed as UV (Vector)
 import Data.Vector.Generic as G (Vector)

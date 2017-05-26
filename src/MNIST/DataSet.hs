@@ -7,7 +7,6 @@ import qualified Data.ByteString.Lazy    as L
 import qualified Data.Vector.Generic     as G
 import qualified Numeric.LinearAlgebra   as HM
 import qualified Numeric.LinearAlgebra.Static  as SM
-import qualified Data.Vector.Unboxed.Base as UV
 
 rows :: Int
 rows = 28
@@ -26,12 +25,12 @@ _loadMNIST
     :: FilePath
     -> FilePath
     -> IO [(Int, UVector Int)]
-_loadMNIST dataPath labelPath = do
-  runMaybeT $ do
+_loadMNIST dataPath labelPath =
+  runMaybeT (do
     i <- MaybeT . fmap (decodeIDX       . GZip.decompress) . L.readFile $ dataPath
     l <- MaybeT . fmap (decodeIDXLabels . GZip.decompress) . L.readFile $ labelPath
     d <- MaybeT . pure $ labeledIntData l i
-    return d
+    return d)
   >>= \case
     Just mnist -> return mnist
     Nothing    -> throwString $
@@ -65,7 +64,7 @@ loadMNISTBp dp lp = _loadMNIST dp lp
 
   where
     mkImage :: UVector Int -> Maybe (R 784)
-    mkImage u = (SM.create . G.convert . G.map (\i -> fromIntegral i / 255) $ u)
+    mkImage u = SM.create . G.convert . G.map (\i -> fromIntegral i / 255) $ u
 
     mkLabel :: Int -> Maybe (R 9)
     mkLabel n = SM.create $ HM.build 9 (fromIntegral . fromEnum . (== n) . round)
