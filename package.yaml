@@ -46,7 +46,7 @@ dependencies:
   - mnist-idx
   - transformers
 
-  - grenade
+# - grenade
   - MonadRandom
 
   - backprop
@@ -78,10 +78,10 @@ executables:
     dependencies:
     - mnist-benchmarks
 
-  grenade_mnist:
-    main: bench/MNIST/Grenade.hs
-    dependencies:
-    - mnist-benchmarks
+# grenade_mnist:
+#   main: bench/MNIST/Grenade.hs
+#   dependencies:
+#   - mnist-benchmarks
 
 
 

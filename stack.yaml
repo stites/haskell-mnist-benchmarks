@@ -10,4 +10,9 @@ extra-deps:
 - concurrent-output-1.7.9
 - hedgehog-0.1
 - wl-pprint-annotated-0.0.1.4
-resolver: nightly-2017-05-20
+- tensorflow-0.1.0.2
+- tensorflow-core-ops-0.1.0.0
+- tensorflow-opgen-0.1.0.0
+- tensorflow-ops-0.1.0.0
+- tensorflow-proto-0.1.0.0
+resolver: nightly-2017-11-06
