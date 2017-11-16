@@ -7,7 +7,16 @@ packages:
     commit: '9509719'
   extra-dep: true
 extra-deps:
-- concurrent-output-1.7.9
+- accelerate-1.0.0.0
+- accelerate-llvm-1.0.0.0
+- accelerate-llvm-native-1.0.0.0
+- chaselev-deque-0.5.0.5
 - hedgehog-0.1
-- wl-pprint-annotated-0.0.1.4
-resolver: nightly-2017-05-20
+- llvm-hs-4.0.1.0
+- tensorflow-0.1.0.2
+- tensorflow-core-ops-0.1.0.0
+- tensorflow-opgen-0.1.0.0
+- tensorflow-ops-0.1.0.0
+- tensorflow-proto-0.1.0.0
+- tensorflow-test-0.1.0.0
+resolver: lts-8.15

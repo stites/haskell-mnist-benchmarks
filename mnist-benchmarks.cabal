@@ -51,6 +51,8 @@ library
     , type-combinators
     , directory
     , generics-sop
+    , accelerate
+    , accelerate-llvm-native
     , tensorflow-core-ops
     , tensorflow-opgen
     , tensorflow-ops
@@ -98,6 +100,8 @@ executable bp_mnist
     , type-combinators
     , directory
     , generics-sop
+    , accelerate
+    , accelerate-llvm-native
     , tensorflow-core-ops
     , tensorflow-opgen
     , tensorflow-ops
@@ -143,6 +147,8 @@ executable grenade_mnist
     , type-combinators
     , directory
     , generics-sop
+    , accelerate
+    , accelerate-llvm-native
     , tensorflow-core-ops
     , tensorflow-opgen
     , tensorflow-ops
@@ -188,6 +194,8 @@ executable tf_mnist
     , type-combinators
     , directory
     , generics-sop
+    , accelerate
+    , accelerate-llvm-native
     , tensorflow-core-ops
     , tensorflow-opgen
     , tensorflow-ops
